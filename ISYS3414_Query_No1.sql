@@ -1,0 +1,140 @@
+-- Please execute this file after you have run the 'ISYS3414_DB_No1' file
+-- Please execute this file on MySQL Workbench 8.0 or later
+
+USE no1;
+
+-- REPORT EMPLOYEE: Current Employees and their personal details
+SELECT EID, E.NAME, GENDER, DATEOFBIRTH, D.NAME 'DEPARTMENT', POSITION, PHONE, EMAIL, STARTDATE, DETAILS
+FROM EMPLOYEE E
+	 JOIN DEPARTMENT D ON E.DEPARTMENT = D.DID
+WHERE ENDDATE IS NULL;
+
+-- Number of Employees Joining each year
+SELECT YEAR(STARTDATE) 'Year of Joining', COUNT(*) 'Number of Employees'
+FROM EMPLOYEE
+GROUP BY YEAR(STARTDATE)
+ORDER BY YEAR(STARTDATE);
+
+-- Percentage of Employees in each Department
+SELECT D.NAME AS 'Department', COUNT(E.EID) * 100 / T.N AS `percent of total`
+FROM (EMPLOYEE E JOIN DEPARTMENT D ON E.DEPARTMENT = D.DID and enddate is null) CROSS JOIN (SELECT COUNT(*) AS N FROM EMPLOYEE) T
+GROUP BY D.NAME, T.N;
+
+-- REPORT DEPARTMENT: Department details and the number of employees
+SELECT D.DID,
+       D.NAME AS Department,
+       E.NAME AS Chief,
+       (SELECT COUNT(EMPLOYEE.EID) FROM EMPLOYEE WHERE EMPLOYEE.DEPARTMENT = D.DID) AS "Total Members"
+FROM DEPARTMENT D JOIN EMPLOYEE E ON D.CHIEF = E.EID
+ORDER BY D.DID;
+
+
+-- Number of Employees by age group
+SELECT CASE 
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 35 THEN '27-35' 
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 49 THEN '36-49'
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 65 THEN '50-65'
+         ELSE '65+' 
+       END AS 'Age group', 
+       COUNT(*) AS 'Number of employee'
+FROM EMPLOYEE
+WHERE enddate is null
+GROUP BY CASE 
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 35 THEN '27-35' 
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 49 THEN '36-49'
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 65 THEN '50-65'
+         ELSE '65+'
+         END
+ORDER BY CASE
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 35 THEN '27-35' 
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 49 THEN '36-49'
+         WHEN 2023 - YEAR(DATEOFBIRTH) <= 65 THEN '50-65'
+         ELSE '65+'
+         END;
+
+
+-- Number of customer have birthday in months
+SELECT MONTH(DATEOFBIRTH) AS 'Month of Birthday', COUNT(*) AS 'Number of Patient'
+FROM PATIENT
+GROUP BY MONTH(DATEOFBIRTH)
+ORDER BY MONTH(DATEOFBIRTH);
+
+-- Gender percentage of Patients
+SELECT COUNT(*) * 100 / T.N AS 'Percentage',
+	CASE GENDER
+        WHEN 'M' THEN 'MALE'
+        WHEN 'F' THEN 'FEMALE'
+	END AS GENDER
+FROM PATIENT CROSS JOIN (SELECT COUNT(*) AS N FROM PATIENT) T
+GROUP BY GENDER, T.N;
+
+-- Patient account register
+SELECT COUNT(PATIENT.PID) 'Total patients',
+       COUNT(PATIENT.PID) - COUNT(PATIENT_ACCOUNT.PID) 'Without account',
+       COUNT(PATIENT_ACCOUNT.PID) 'With account'
+FROM PATIENT
+LEFT JOIN PATIENT_ACCOUNT
+       ON PATIENT.PID = PATIENT_ACCOUNT.PID;
+
+
+-- Top 5 employees booked by patient
+SELECT EMPLOYEE.NAME,
+       COUNT(APPOINTMENT.ID) 'Number of appointments'
+  FROM APPOINTMENT
+  JOIN EMPLOYEE
+    ON EMPLOYEE.EID = APPOINTMENT.DOCTOR
+    GROUP BY EMPLOYEE.NAME
+    ORDER BY COUNT(APPOINTMENT.ID) LIMIT 5;
+
+-- Appointment Report
+SELECT APPOINTMENT.ID,
+       EMPLOYEE.NAME AS Doctor,
+       PATIENT.NAME AS Patient,
+       DATE_FORMAT(STARTTIME, '%d %M %Y %H:%i:%S') AS "Start Time",
+       DATE_FORMAT(ENDTIME, '%d %M %Y %H:%i:%S') AS "End Time",
+       ROOM AS Room
+       
+FROM APPOINTMENT
+     JOIN EMPLOYEE ON APPOINTMENT.DOCTOR = EMPLOYEE.EID
+     JOIN PATIENT ON APPOINTMENT.PATIENT = PATIENT.PID
+ORDER BY APPOINTMENT.ID;
+
+
+-- Service providing report
+SELECT UNDERGOES.APPOINTMENT,
+       PATIENT.NAME AS PATIENT,
+       TREATMENT.NAME AS TREATMENT,
+       UNDERGOES.DATE,
+       E1.NAME AS Physician,
+       E2.NAME AS Assistant,
+       TREATMENT_ROOM.ROOMNAME
+  FROM UNDERGOES
+      LEFT JOIN TREATMENT
+      ON TREATMENT.ID = UNDERGOES.TREATMENT
+      LEFT JOIN TREATMENT_ROOM
+      ON TREATMENT_ROOM.ROOMNO = UNDERGOES.ROOMBOOKING
+      LEFT JOIN EMPLOYEE E1
+      ON E1.EID = UNDERGOES.PHYSICIAN
+      LEFT JOIN EMPLOYEE E2
+      ON E2.EID = UNDERGOES.ASSISTANT
+      JOIN APPOINTMENT
+      ON APPOINTMENT.ID = UNDERGOES.APPOINTMENT
+      JOIN PATIENT
+      ON PATIENT.PID = APPOINTMENT.PATIENT
+      ORDER by undergoes.appointment; 
+
+-- Bill report 
+SELECT B.ID AS Code,
+       B.APPOINTMENT AS Appointment,
+       P.NAME AS Patient,
+       B.BILLDATE AS "Issue Date",
+       B.TOTAL AS Total
+FROM BILL B
+     JOIN APPOINTMENT A ON B.APPOINTMENT = A.ID
+     JOIN PATIENT P ON A.PATIENT = P.PID
+ORDER BY B.APPOINTMENT;
+
+
+
+
+
